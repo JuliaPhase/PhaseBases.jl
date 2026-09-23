@@ -19,6 +19,7 @@ export Basis,
     residual,
     residual!,
     ShiftedBasis,
+    normalize_basis,
     zernike_basis
 export zernike
 export rot90ccw, rot90cw, rot180, flipx, flipy

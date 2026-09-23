@@ -32,6 +32,49 @@ Basis(elements::Vector, indexes; kwargs...) =
 
 basislayoutstyle(::Basis) = Indexed()
 
+"""
+    normalize_basis(b::AbstractBasis; mode=:rms) -> Basis
+
+Return a `Basis` spanning the same space as `b`, with every element rescaled on the
+discrete support `b.indexes`:
+- `mode=:rms` — unit RMS, `sqrt(mean(abs2, f[indexes])) == 1`; coefficients are RMS values.
+- `mode=:l2`  — unit L2 norm, `sum(abs2, f[indexes]) == 1`; for (near-)orthogonal bases the
+  Gram matrix is ≈ I, so `decompose` and `allinners` give (nearly) the same coefficients.
+
+The normalisation is computed on the sampled grid, not analytically (e.g. it is not the
+OSA `√(2(n+1))` factor for Zernikes), so it holds exactly for cropped/anisotropic apertures.
+
+A `PixelBasis` is returned unchanged (its elements already have unit L2 norm, and
+converting it to a dense `Basis` would be prohibitively expensive).
+
+Coefficients are converted by materialising and decomposing, e.g.
+`decompose(compose(b, c), normalize_basis(b))`; for element `f` with scale `s`,
+the coefficient becomes `c·s`. An identically zero element raises an error.
+
+# Example
+```julia
+zb  = ZernikeBW(dom, d, 4)
+nb  = normalize_basis(zb; mode=:rms)
+idx = nb.indexes
+sqrt(sum(abs2, nb[5][idx]) / length(idx))   # ≈ 1.0
+```
+"""
+function normalize_basis(b::AbstractBasis; mode::Symbol=:rms)
+    mode in (:rms, :l2) ||
+        throw(ArgumentError("mode must be :rms or :l2, got :$mode"))
+    idx = b.indexes
+    denom = mode === :rms ? length(idx) : 1
+    els = map(1:length(b)) do i
+        f = elements(b, i)
+        s = sqrt(sum(abs2, view(f, idx)) / denom)
+        iszero(s) && error("normalize_basis: element $i is identically zero on the support")
+        f ./ s
+    end
+    return Basis(els, idx)
+end
+
+normalize_basis(b::PixelBasis; mode::Symbol=:rms) = b
+
 # We also introduce a basis with shifted origin
 #= struct ShiftedBasis <: AbstractBasis
     elements::VectorOfArray
