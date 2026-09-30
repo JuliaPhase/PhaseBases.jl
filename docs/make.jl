@@ -17,11 +17,11 @@ makedocs(;
     sitename="PhaseBases.jl",
     modules=[PhaseBases],
     authors="Oleg Soloviev",
-    repo="https://github.com/olejorik/PhaseBases.jl/blob/{commit}{path}#L{line}",
+    repo="https://github.com/JuliaPhase/PhaseBases.jl/blob/{commit}{path}#L{line}",
     checkdocs=:exports,
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://olejorik.github.io/PhaseBases.jl/stable/",
+        canonical="https://juliaphase.github.io/PhaseBases.jl/stable/",
         assets=String[],
     ),
     clean=false,
@@ -42,4 +42,4 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo="github.com/olejorik/PhaseBases.jl", target="build", devbranch="main")
+deploydocs(; repo="github.com/JuliaPhase/PhaseBases.jl", target="build", devbranch="main")

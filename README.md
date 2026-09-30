@@ -4,10 +4,10 @@ Part of the [Phase.jl](https://github.com/JuliaPhase/Phase.jl) ecosystem.
 
 <!-- DOI badge: add after first Zenodo release -->
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://olejorik.github.io/PhaseBases.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://olejorik.github.io/PhaseBases.jl/dev)
-[![Build Status](https://github.com/olejorik/PhaseBases.jl/workflows/CI/badge.svg)](https://github.com/olejorik/PhaseBases.jl/actions)
-[![Coverage](https://codecov.io/gh/olejorik/PhaseBases.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/olejorik/PhaseBases.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaphase.github.io/PhaseBases.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaphase.github.io/PhaseBases.jl/dev)
+[![Build Status](https://github.com/JuliaPhase/PhaseBases.jl/workflows/CI/badge.svg)](https://github.com/JuliaPhase/PhaseBases.jl/actions)
+[![Coverage](https://codecov.io/gh/JuliaPhase/PhaseBases.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaPhase/PhaseBases.jl)
 
 WIP
 

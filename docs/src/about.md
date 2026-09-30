@@ -42,6 +42,6 @@ To display the calculated Zernike polynomials with Makie's `heatmap` function in
 
 ## Related packages
 
-- [`PhaseUtils`](https://github.com/olejorik/PhaseUtils.jl) — phase unwrapping and windowing utilities
-- [`PhaseRetrieval`](https://github.com/olejorik/PhaseRetrieval.jl) — phase retrieval algorithms
-- [`PhasePlots`](https://github.com/olejorik/PhasePlots.jl) — visualization helpers
+- [`PhaseUtils`](https://github.com/JuliaPhase/PhaseUtils.jl) — phase unwrapping and windowing utilities
+- [`PhaseRetrieval`](https://github.com/JuliaPhase/PhaseRetrieval.jl) — phase retrieval algorithms
+- [`PhasePlots`](https://github.com/JuliaPhase/PhasePlots.jl) — visualization helpers

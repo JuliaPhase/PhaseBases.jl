@@ -17,5 +17,5 @@ keywords:
   - "phase retrieval"
   - "Julia"
 license: MIT
-repository-code: "https://github.com/olejorik/PhaseBases.jl"
+repository-code: "https://github.com/JuliaPhase/PhaseBases.jl"
 version: "0.1.0"
