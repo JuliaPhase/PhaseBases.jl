@@ -30,8 +30,8 @@ allocation in `decompose!`/`project!`/`residual!` for `Basis` (~624 bytes/call
 measured).
 
 **Root cause:** `fieldtypes(Basis)` are not concrete:
-`(VectorOfArray, VectorOfArray, Array, Vector{<:CartesianIndex}, Vector)` — no type
-parameters on `VectorOfArray`/`Array`/`Vector`, and `Vector{<:CartesianIndex}` is a
+`(Vector{<:AbstractArray}, Vector{<:AbstractArray}, Array, Vector{<:CartesianIndex}, Vector)` — no type
+parameters on `Array`/`Vector`, and `Vector{<:CartesianIndex}` is a
 `UnionAll`, not a concrete type. Any access to `b.dualelements`/`b.indexes` is
 therefore inferred as abstract, forcing the compiler to box every scalar produced
 inside the `decompose!` loop (`inner_indexed` result) — independent of the trait
@@ -41,7 +41,7 @@ dispatch, since the trait only picks which method runs, not the field types.
 **Suggested fix:** parametrize the struct with concrete field types, e.g.:
 
 ```julia
-struct Basis{TE<:VectorOfArray,TD<:VectorOfArray,TA<:AbstractArray,
+struct Basis{TE<:AbstractVector,TD<:AbstractVector,TA<:AbstractArray,
              TI<:AbstractVector{<:CartesianIndex},TN<:AbstractVector} <: AbstractBasis
     elements::TE
     dualelements::TD

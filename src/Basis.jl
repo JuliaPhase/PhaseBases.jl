@@ -2,8 +2,8 @@
 
 
 struct Basis <: AbstractBasis
-    elements::VectorOfArray
-    dualelements::VectorOfArray
+    elements::Vector{<:AbstractArray}
+    dualelements::Vector{<:AbstractArray}
     ap::Array
     indexes::Vector{<:CartesianIndex}
     norms::Vector
@@ -22,13 +22,11 @@ struct Basis <: AbstractBasis
         else
             invels = pinv(elten; atol=atol, rtol=rtol)
         end
-        dualelements = VectorOfArray(eachrow(invels))
+        dualelements = [collect(r) for r in eachrow(invels)]
         return new(elements, dualelements, ap, idx, [sqrt.(inner(f, f)) for f in elements])
     end
 end
 
-Basis(elements::Vector, indexes; kwargs...) =
-    Basis(VectorOfArray(elements), indexes; kwargs...)
 
 basislayoutstyle(::Basis) = Indexed()
 
@@ -77,9 +75,9 @@ normalize_basis(b::PixelBasis; mode::Symbol=:rms) = b
 
 # We also introduce a basis with shifted origin
 #= struct ShiftedBasis <: AbstractBasis
-    elements::VectorOfArray
+    elements::Vector{<:AbstractArray}
     origin::Array
-    dualelements::VectorOfArray
+    dualelements::Vector{<:AbstractArray}
     ap::Array
     indexes::Array{Tuple}
     norms::Vector
@@ -96,7 +94,7 @@ normalize_basis(b::PixelBasis; mode::Symbol=:rms) = b
         else
             invels = pinv(elten; atol=atol, rtol=rtol)
         end
-        dualelements = VectorOfArray(eachrow(invels))
+        dualelements = [collect(r) for r in eachrow(invels)]
         return new(
             elements,
             origin,

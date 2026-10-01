@@ -1,7 +1,6 @@
 using PhaseBases
 using Test
 using LinearAlgebra
-using RecursiveArrayTools
 
 @testset "Zernike generation" begin
     @test zernike(0.5, 0.5, 3) == (
@@ -52,7 +51,7 @@ end
     @test PhaseBases.inner(el[1], el[2]) == 0
 
     a = reshape(1:27, (3, 3, 3))
-    b = VectorOfArray([a[:, :, i] for i in 1:last(size(a))])
+    b = [a[:, :, i] for i in 1:last(size(a))]
     coef = [1, 100, 10000]
     @test PhaseBases.inner(b, coef) ==
         PhaseBases.inner(coef, b) ==

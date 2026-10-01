@@ -2,7 +2,6 @@
 # Each element of the basis can be a multidimensional array ()
 # Internally it can be implemented differently: as one multidimensional array or as vector of arrays.
 # Externally it should make no difference via the following organization.
-using RecursiveArrayTools
 using SparseArrays
 
 import Base: length, collect, promote_rule, convert, copy
@@ -366,12 +365,12 @@ function allinners!(coeffs::AbstractVector, a, b::OrthogonalBasis)
 end
 
 
-# Function below is for basis implemented as VectorOfArray
+# Function below is for basis implemented as a vector of arrays
 # Do we need the same for multidimensional array?
 function comb!(
     target,
     coef::AbstractVector{T} where {T<:Number},
-    a::Union{VectorOfArray,AbstractVector},
+    a::AbstractVector,
 )
     size(target) == size(a[1]) ||
         throw(ArgumentError("Target array size does not match basis element size"))
@@ -383,7 +382,7 @@ function comb!(
 end
 
 function comb(
-    coef::AbstractVector{T} where {T<:Number}, a::Union{VectorOfArray,AbstractVector}
+    coef::AbstractVector{T} where {T<:Number}, a::AbstractVector
 )
     sum = similar(a[1])
     # sum .= 0
@@ -394,12 +393,12 @@ function comb(
     comb!(sum, coef, a)
     return sum
 end
-comb(a::Union{VectorOfArray,AbstractVector}, coef::AbstractVector{T} where {T<:Number}) =
+comb(a::AbstractVector, coef::AbstractVector{T} where {T<:Number}) =
     comb(coef, a)
 
 comb!(
     target,
-    a::Union{VectorOfArray,AbstractVector},
+    a::AbstractVector,
     coef::AbstractVector{T} where {T<:Number},
 ) = comb!(target, coef, a)
 
@@ -576,7 +575,7 @@ function _inner(a::AbstractSparseArray, b::AbstractSparseArray)
     return dot(nonzeros(a), nonzeros(b))
 end
 
-function inner(a::Union{Vector,VectorOfArray}, b::Union{Vector,VectorOfArray})
+function inner(a::Vector, b::Vector)
     # TODO rework with preallocated
     return sum(a[i] * b[i] for i in eachindex(a))
 end
@@ -590,7 +589,7 @@ end
 
 """
     innermatrix(
-    a::Union{Vector,VectorOfArray}, b::Union{Vector,VectorOfArray}, weight=1
+    a::Vector, b::Vector, weight=1
 )
 
 @doctest
@@ -603,7 +602,7 @@ julia> PhaseBases.innermatrix([10, 100], [2,3,4])
 ```
 """
 function innermatrix(
-    a::Union{Vector,VectorOfArray}, b::Union{Vector,VectorOfArray}, weight=1
+    a::Vector, b::Vector, weight=1
 )
     return [_inner(b[i], weight .* a[j]) for i in eachindex(b), j in eachindex(a)]
 end
@@ -622,7 +621,7 @@ Orthonormal basis obtained by [`orthogonalize`](@ref)ing an arbitrary `AbstractB
 Elements are dense arrays of the same size as the source aperture, zero outside `indexes`.
 """
 struct OrthoBasis{T,N} <: OrthonormalBasis
-    elements::VectorOfArray
+    elements::Vector{<:AbstractArray}
     ap::Array{T,N}
     indexes::Vector{CartesianIndex{N}}
 end
@@ -672,7 +671,7 @@ function orthogonalize(b::AbstractBasis; atol=0, rtol=0)
         end for k in 1:r
     ]
 
-    return OrthoBasis(VectorOfArray(newels), ap, idx)
+    return OrthoBasis(newels, ap, idx)
 end
 
 """

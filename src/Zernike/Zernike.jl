@@ -127,7 +127,7 @@ and
 
 """
 struct _ZernikeBW_ort <: OrthogonalBasis
-    elements::VectorOfArray
+    elements::Vector{<:AbstractArray}
     ap::Array
     mask::Array
     norms::Vector
@@ -160,22 +160,22 @@ Fringe indices, or the first N terms in some ordering), see [`zernike_basis`](@r
 instead — it avoids computing the dual basis over unused modes.
 """
 struct ZernikeBW <: AbstractBasis
-    elements::VectorOfArray
-    dualelements::VectorOfArray
+    elements::Vector{<:AbstractArray}
+    dualelements::Vector{<:AbstractArray}
     ap::Array
     mask::Array
     indexes::Vector{CartesianIndex{2}}
     norms::Vector
     function ZernikeBW(elements, ap, mask)
         # ata = innermatrix(elements, elements, ap)
-        # dualelements = VectorOfArray([
+        # dualelements = ([
         #     inner(elements, (pinv(ata))[:, i]) for i in 1:length(elements)
         # ])
-        elten = reshape(Array(ap .* elements), (:, length(elements)))
+        elten = reshape(stack([ap .* e for e in elements]), :, length(elements))
         invels = pinv(elten)
-        dualelements = VectorOfArray([
+        dualelements = [
             reshape(invels[i, :], size(ap)) for i in 1:length(elements)
-        ])
+        ]
         return new(
             elements,
             dualelements,
@@ -214,7 +214,7 @@ function ZernikeBW(dom::CartesianDomain2D, d::Real, maxorder::Integer; fftshifte
         return ZernikeBW(makezerniketable(dom, maxorder, d / 2; coordmap), aperture(dom, d)...)
     else
         return ZernikeBW(
-            VectorOfArray([ifftshift(e) for e in makezerniketable(dom, maxorder, d / 2; coordmap)]),
+            [ifftshift(e) for e in makezerniketable(dom, maxorder, d / 2; coordmap)],
             ifftshift.(aperture(dom, d))...,
         )
     end
@@ -225,7 +225,7 @@ end
 #     y = range(-1, 1, length=gridsize)
 #     totalznum = Int((maxorder + 2) * (maxorder + 1) / 2)
 #     ztable = [zernike(xc, yc, maxorder)[:z] for xc ∈ x,  yc ∈ y ]
-#     zvec = VectorOfArray([zeros(gridsize, gridsize) for i = 1:totalznum])
+#     zvec = [zeros(gridsize, gridsize) for i = 1:totalznum])
 #     [zvec[i,:] = ztable[i] for i = eachindex(ztable) ]
 #     return zvec
 # end
@@ -235,8 +235,10 @@ function makezerniketable(dom::CartesianDomain2D, maxorder::Integer, scale=1; co
     y = dom.yrange / scale
     totalznum = Int((maxorder + 2) * (maxorder + 1) / 2)
     ztable = [begin u, v = coordmap((xc, yc)); zernike(u, v, maxorder)[:z] end for yc in y, xc in x]
-    zvec = VectorOfArray([zeros(length(y), length(x)) for i in 1:totalznum])
-    [zvec[i, :] = ztable[i] for i in eachindex(ztable)]
+    zvec = [zeros(length(y), length(x)) for i in 1:totalznum]
+    for (i, z) in enumerate(ztable), k in 1:totalznum
+        zvec[k][i] = z[k]
+    end
     return zvec
 end
 
@@ -249,11 +251,11 @@ end
 
 function makezerniketable(points::Array, maxorder::Integer)
     totalznum = Int((maxorder + 2) * (maxorder + 1) / 2)
-    zvec = VectorOfArray([zeros(size(points)) for i in 1:totalznum])
+    zvec = [zeros(size(points)) for i in 1:totalznum]
     for coord in eachindex(points)
         z = zernike(points[coord]..., maxorder)[:z]
         for i in 1:totalznum
-            zvec[coord, i] = z[i]
+            zvec[i][coord] = z[i]
         end
     end
     return zvec
@@ -262,11 +264,11 @@ end
 function makezerniketable(xs::Array, ys::Array, maxorder::Integer)
     size(xs) == size(ys) || error("Sizes of `x` and `y` arrays do not match")
     totalznum = Int((maxorder + 2) * (maxorder + 1) / 2)
-    zvec = VectorOfArray([zeros(size(xs)) for i in 1:totalznum])
+    zvec = [zeros(size(xs)) for i in 1:totalznum]
     for coord in eachindex(xs)
         z = zernike(xs[coord], ys[coord], maxorder)[:z]
         for i in 1:totalznum
-            zvec[coord, i] = z[i]
+            zvec[i][coord] = z[i]
         end
     end
     return zvec
@@ -286,7 +288,7 @@ end
 
 # Sparse Zernike
 struct ZernikeBWSparse <: OrthogonalBasis
-    elements::VectorOfArray
+    elements::Vector{<:AbstractArray}
     ap::SparseMatrixCSC{Float64,Int64}
     mask::SparseMatrixCSC{Bool,Int64}
     norms::Vector
@@ -298,9 +300,12 @@ function makesparsezerniketable(dom::CartesianDomain2D, maxorder::Integer, apD=2
     ap = sparse(@. x^2 + y'^2 <= apD^2 / 4)
     is, js, vs = findnz(ap)
     totalznum = Int((maxorder + 2) * (maxorder + 1) / 2)
-    zvec = VectorOfArray([similar(ap, Float64) for k in 1:totalznum])
+    zvec = [similar(ap, Float64) for k in 1:totalznum]
     for ind in eachindex(is)
-        zvec[is[ind], js[ind], :] .= zernike(x[is[ind]], y[js[ind]], maxorder)[:z]
+        zk = zernike(x[is[ind]], y[js[ind]], maxorder)[:z]
+        for k in 1:totalznum
+            zvec[k][is[ind], js[ind]] = zk[k]
+        end
     end
     norms = [norm(zer.nzval) for zer in zvec]
     norms /= norms[1]

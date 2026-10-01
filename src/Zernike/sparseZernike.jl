@@ -5,13 +5,13 @@ using SparseArrays
 aaa = sparse(ap)
 is, js, vs = findnz(aaa)
 
-using RecursiveArrayTools
 maxord = 30
-z = VectorOfArray([similar(aaa, Float64) for k in 1:Int((maxord + 2) * (maxord + 1) / 2)])
-z[7, 2, :] .= 1
+z = [similar(aaa, Float64) for k in 1:Int((maxord + 2) * (maxord + 1) / 2)]
+for zk in z; zk[7, 2] = 1; end
 using PhaseBases
 for ind in eachindex(is)
-    z[is[ind], js[ind], :] .= zernike(x[is[ind]], y[js[ind]], maxord)[:z]
+    zk = zernike(x[is[ind]], y[js[ind]], maxord)[:z]
+    for k in eachindex(z); z[k][is[ind], js[ind]] = zk[k]; end
 end
 
 using PhaseUtils, PhasePlots
@@ -25,7 +25,7 @@ norms = [norm(zer.nzval) for zer in z]
 norms /= norms[1]
 
 struct ZernikeBWSparse <: OrthogonalBasis
-    elements::VectorOfArray
+    elements::Vector{<:AbstractArray}
     ap::Array
     mask::Array
     norms::Vector
