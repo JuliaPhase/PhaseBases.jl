@@ -139,9 +139,9 @@ println("Combined phase: ", total)
 println("Number of terms: ", length(total.coef))
 
 ## Subtracting an aberration
-residual = total - ph_fringe   ## should recover defocus only
-println("Residual terms: ",
-    [(j, c) for (j, c) in zip(residual.indices, residual.coef) if !iszero(c)])
+diff_phase = total - ph_fringe   ## should recover defocus only
+println("Remaining terms: ",
+    [(j, c) for (j, c) in zip(diff_phase.indices, diff_phase.coef) if !iszero(c)])
 
 
 # ## 5 — Materialization: From Coefficients to Arrays
@@ -157,7 +157,7 @@ defocus_arr = collect(defocus, zbas)
 coma_arr    = collect(coma_sph, zbas)
 total_arr   = collect(defocus + coma_sph, zbas)
 
-## Plotting helper — masks outside the aperture for clean display
+## NaN outside the aperture for clean display
 ap = mask(zbas)
 
 fig = Figure(; size=(900, 320))
@@ -166,7 +166,7 @@ for (i, (arr, title)) in enumerate(zip(
     ["Defocus (Noll 4)", "Coma + Spherical", "Combined"],
 ))
     ax = Axis(fig[1, 2i-1]; title=title, aspect=DataAspect())
-    hm = heatmap!(ax, arr .* ap; colormap=:viridis)
+    hm = heatmap!(ax, (arr .* ap)'; colormap=:viridis)
     Colorbar(fig[1, 2i], hm; width=12)
     hidedecorations!(ax)
 end
@@ -180,17 +180,23 @@ println("ModalPhase coefficients (first 6): ", round.(mp.coef[1:6]; digits=4))
 
 # ### Ordering invariance
 #
-# The same physical term produces identical arrays regardless of original ordering:
+# The same physical polynomial gives the same array whichever convention names it,
+# but the same *index* can mean different polynomials in different conventions:
 
-arr_fringe = collect(SymbolicZernikePhase([4], [1.0], Fringe), zbas)
-arr_noll   = collect(SymbolicZernikePhase([4], [1.0], Noll),   zbas)
-arr_osa    = collect(SymbolicZernikePhase([4], [1.0], OSA),     zbas)  ## OSA 4 ≠ defocus!
-arr_osa_d  = collect(SymbolicZernikePhase([nm_to_j(OSA, (n=2, m=0))], [1.0], OSA), zbas)
+## Index 4 is defocus (n=2, m=0) in all three conventions
+arr_fringe4 = collect(SymbolicZernikePhase([4], [1.0], Fringe), zbas)
+arr_noll4   = collect(SymbolicZernikePhase([4], [1.0], Noll),   zbas)
+arr_osa4    = collect(SymbolicZernikePhase([4], [1.0], OSA),    zbas)
+println("Fringe 4 ≈ Noll 4: ", arr_fringe4 ≈ arr_noll4)
+println("Fringe 4 ≈ OSA 4:  ", arr_fringe4 ≈ arr_osa4)
 
-## Fringe 4, Noll 4 and OSA j for (n=2,m=0) all give defocus
-println("Fringe 4 ≈ Noll 4:      ", arr_fringe ≈ arr_noll)
-println("Fringe 4 ≈ OSA defocus:  ", arr_fringe ≈ arr_osa_d)
-println("Noll 4 ≈ OSA 4 (oblique astigmatism!): ", arr_noll ≈ arr_osa)  ## false!
+## Index 5 is *not* the same polynomial everywhere:
+## Fringe 5 and OSA 5 are (n=2, m=2); Noll 5 is (n=2, m=-2)
+arr_fringe5 = collect(SymbolicZernikePhase([5], [1.0], Fringe), zbas)
+arr_noll5   = collect(SymbolicZernikePhase([5], [1.0], Noll),   zbas)
+arr_osa5    = collect(SymbolicZernikePhase([5], [1.0], OSA),    zbas)
+println("Fringe 5 ≈ OSA 5:  ", arr_fringe5 ≈ arr_osa5)    ## true
+println("Fringe 5 ≈ Noll 5: ", arr_fringe5 ≈ arr_noll5)   ## false
 
 
 # ## 6 — Summary

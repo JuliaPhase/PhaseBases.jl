@@ -1,6 +1,6 @@
 using PhaseBases
-import PhaseBases: decompose, decompose_and_complement, project
 using CairoMakie
+using PhaseBases: decompose  ## disambiguate from Makie/GeometryBasics `decompose`
 CairoMakie.activate!(; type="png")
 
 # # Getting Started with PhaseBases.jl
@@ -12,8 +12,9 @@ CairoMakie.activate!(; type="png")
 
 # ## 1 — Create a Zernike Basis
 #
-# A `ZernikeBW` stores all Born & Wolf–normalised Zernike polynomials
+# A `ZernikeBW` stores all Born & Wolf–normalized Zernike polynomials
 # up to a given radial order, pre-evaluated on a square grid.
+# Elements are stored in OSA order, so element `k` is the polynomial with OSA index `k - 1`.
 
 zbas = ZernikeBW(128, 6)
 length(zbas)          ## number of polynomials
@@ -23,20 +24,21 @@ length(zbas)          ## number of polynomials
 
 fig = Figure(; size=(500, 180))
 ax1 = Axis(fig[1, 1]; title="aperture", aspect=DataAspect())
-ax2 = Axis(fig[1, 2]; title="Z₅ (tilt)", aspect=DataAspect())
-ax3 = Axis(fig[1, 3]; title="Z₁₃ (spherical)", aspect=DataAspect())
-heatmap!(ax1, aperture(zbas))
-heatmap!(ax2, elements(zbas)[5] .* mask(zbas))
-heatmap!(ax3, elements(zbas)[13] .* mask(zbas))
+ax2 = Axis(fig[1, 2]; title="element 5 (defocus)", aspect=DataAspect())
+ax3 = Axis(fig[1, 3]; title="element 13 (spherical)", aspect=DataAspect())
+heatmap!(ax1, (aperture(zbas))')
+heatmap!(ax2, (elements(zbas)[5] .* mask(zbas))')
+heatmap!(ax3, (elements(zbas)[13] .* mask(zbas))')
 fig
 
 # ## 2 — Describe a Wavefront (ModalPhase)
 #
 # A `ModalPhase` stores coefficients in a basis *lazily* —
 # the gridded array is produced only when you call `collect`.
+# Coefficients below are indexed by element position (1-based).
 
 coef = zeros(length(zbas))
-coef[5]  = 0.6   ## tilt
+coef[5]  = 0.6   ## defocus
 coef[8]  = -0.3  ## coma
 coef[13] = 0.15  ## spherical
 
@@ -44,7 +46,7 @@ wf = ModalPhase(coef, zbas)
 
 fig2 = Figure(; size=(300, 260))
 ax = Axis(fig2[1, 1]; title="wavefront", aspect=DataAspect())
-heatmap!(ax, collect(wf) .* mask(zbas))
+heatmap!(ax, (collect(wf) .* mask(zbas))')
 fig2
 
 # ## 3 — Decompose an Array Back into Coefficients
@@ -55,11 +57,17 @@ fig2
 arr = collect(wf)
 fitted = decompose(arr, zbas)
 
-fig3 = Figure(; size=(500, 220))
-ax1 = Axis(fig3[1, 1]; title="original coefs", ylabel="value")
-ax2 = Axis(fig3[1, 2]; title="fitted coefs", ylabel="value")
-barplot!(ax1, 1:length(coef), coef)
-barplot!(ax2, 1:length(fitted), fitted)
+fig3 = Figure(; size=(800, 280))
+ax = Axis(
+    fig3[1, 1];
+    ylabel="coefficient",
+    xticks=zerniketicks(zbas),    ## tick labels show the (n, m) indices
+    xticklabelrotation=π / 3,
+    xticklabelsize=9,
+)
+barplot!(ax, coef; label="original", n_dodge=2, dodge=1)
+barplot!(ax, fitted; label="fitted", n_dodge=2, dodge=2)
+axislegend(ax)
 fig3
 
 # The `project` shortcut composes the fitted coefficients directly:

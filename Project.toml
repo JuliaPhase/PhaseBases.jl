@@ -14,6 +14,7 @@ ZChop = "8603256b-76ad-53fe-b511-38a38e6437cd"
 
 [compat]
 FFTW = "1.10.0"
+RecursiveArrayTools = "3"
 Statistics = "1.11.1"
 julia = "1"
 

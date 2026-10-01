@@ -1,7 +1,9 @@
 using PhaseBases
-import PhaseBases: decompose, decompose_and_complement, project
 using LinearAlgebra: norm
+using Random: seed!
+seed!(1)   ## reproducible noise
 using CairoMakie
+using PhaseBases: decompose  ## disambiguate from Makie/GeometryBasics `decompose`
 CairoMakie.activate!(; type="png")
 
 # # Modal and Zonal Phases
@@ -29,7 +31,7 @@ wf_sp = ModalPhase([5, 13], [0.8, -0.4], zbas)  ## same result
 
 collect(wf) ≈ collect(wf_sp)   ## true
 
-# ### Zero-initialised
+# ### Zero-initialized
 
 wf0 = ModalPhase(zbas)         ## all-zero coefficients
 
@@ -72,7 +74,7 @@ maximum(abs, coefficients(zp2) .- 2 .* arr)  ## ≈ 0
 
 # ## 4 — Conversions
 #
-# **Modal → Zonal**: materialise via `ZonalPhase(modal)` or `convert`.
+# **Modal → Zonal**: materialize via `ZonalPhase(modal)` or `convert`.
 
 zp_from_modal = ZonalPhase(wf)
 
@@ -84,8 +86,8 @@ wf_roundtrip = ModalPhase(fitted, zbas)
 fig = Figure(; size=(500, 220))
 ax1 = Axis(fig[1, 1]; title="original", aspect=DataAspect())
 ax2 = Axis(fig[1, 2]; title="round-tripped", aspect=DataAspect())
-heatmap!(ax1, collect(wf) .* mask(zbas); colormap=:RdBu)
-heatmap!(ax2, collect(wf_roundtrip) .* mask(zbas); colormap=:RdBu)
+heatmap!(ax1, (collect(wf) .* mask(zbas))'; colormap=:RdBu)
+heatmap!(ax2, (collect(wf_roundtrip) .* mask(zbas))'; colormap=:RdBu)
 fig
 
 # ## 5 — Decompose and Complement
@@ -102,12 +104,12 @@ fig2 = Figure(; size=(650, 220))
 ax1 = Axis(fig2[1, 1]; title="input", aspect=DataAspect())
 ax2 = Axis(fig2[1, 2]; title="projection", aspect=DataAspect())
 ax3 = Axis(fig2[1, 3]; title="residual", aspect=DataAspect())
-heatmap!(ax1, noisy .* mask(zbas); colormap=:RdBu)
-heatmap!(ax2, project(noisy, zbas) .* mask(zbas); colormap=:RdBu)
-heatmap!(ax3, residual .* mask(zbas); colormap=:RdBu)
+heatmap!(ax1, (noisy .* mask(zbas))'; colormap=:RdBu)
+heatmap!(ax2, (project(noisy, zbas) .* mask(zbas))'; colormap=:RdBu)
+heatmap!(ax3, (residual .* mask(zbas))'; colormap=:RdBu)
 fig2
 
-# ## Summary
+# ## 6 — Summary
 #
 # | Feature / function | Purpose |
 # |:---|:---|

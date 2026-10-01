@@ -710,6 +710,13 @@ coefficients!(ph::Phase, coef) =
 *(ph::Phase, c::Real) = *(c::Real, ph::Phase)
 +(x::Phase, y::Phase) = +(promote(x, y)...)
 -(x::Phase, y::Phase) = -(promote(x, y)...)
+"""
+    ZonalPhase(coef::Array{Float64,2})
+
+Phase stored as a 2D array of pixel values. Use `collect` or `coefficients` to
+get the array back. A [`ModalPhase`](@ref) can be converted with `ZonalPhase(ph)`,
+which evaluates the basis on its grid.
+"""
 struct ZonalPhase <: AbstractZonalPhase
     coef::Array{Float64,2}
 end

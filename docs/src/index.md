@@ -15,7 +15,7 @@ and modal phase representations.
 - [`ZernikeBW`](@ref) — disk-based Zernike polynomial basis (Born & Wolf normalization)
 - [`SymbolicZernikePhase`](@ref) — coefficients-only phase, independent of any computational grid
 - [`ModalPhase`](@ref) — phase as a linear combination of basis functions
-- `ZonalPhase` — phase as a pixel-value array
+- [`ZonalPhase`](@ref) — phase as a pixel-value array
 - Index conversion utilities: `fringe_j_to_nm`, `noll_j_to_nm`, `nm_to_osa_j`, …
 
 ## Quick start
@@ -42,8 +42,10 @@ arr = collect(wf, zbas)
 
 This work has received funding from the ECSEL Joint Undertaking (JU) under grant agreement No 826589 (MADEin4). The JU receives support from the European Union's Horizon 2020 research and innovation programme and France, Germany, Austria, Italy, Sweden, Netherlands, Belgium, Hungary, Romania and Israel.
 
-This work has received funding from the Chips Joint Undertaking (JU) under grant agreement No 101111948 (14AMI). The JU receives support from the European Union's Horizon Europe research and innovation programme. The project is supported by the Chips Joint Undertaking and its members including the top-up funding by RVO (The Netherlands Enterprise Agency).
+This work is part of the 14AMI project (grant agreement No 101111948). The project is supported by the Chips Joint Undertaking and its members including the top-up funding by RVO (The Netherlands Enterprise Agency).
 
-<img src="assets/funding/EU-flag.svg" alt="European Union flag" height="60">
-<img src="assets/funding/ECSEL-JU.jpg" alt="ECSEL Joint Undertaking" height="60">
-<img src="assets/funding/Chips-JU.png" alt="Chips Joint Undertaking, co-funded by the European Union" height="60">
+```@raw html
+<img src="assets/funding/EU-flag.svg" alt="European Union flag" height="60" style="height: 60px; width: auto; margin-right: 1em;">
+<img src="assets/funding/ECSEL-JU.jpg" alt="ECSEL Joint Undertaking" height="60" style="height: 60px; width: auto; margin-right: 1em;">
+<img src="assets/funding/Chips-JU.png" alt="Chips Joint Undertaking, co-funded by the European Union" height="60" style="height: 60px; width: auto; margin-right: 1em;">
+```

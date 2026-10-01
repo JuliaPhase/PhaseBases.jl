@@ -7,7 +7,7 @@ Translation of the code from
 [1] T. B. Andersen, “Efficient and robust recurrence relations for the Zernike circle polynomials
 and their derivatives in Cartesian coordinates,” _Opt. Express_, vol. 26, no. 15, p. 18878, Jul. 2018.
 
-     Numbering scheme:
+     Numbering scheme (this is the OSA/ANSI order; array position k holds OSA index k-1):
      Within a radial order, sine terms come first
              ...
            sin((n-2m)*theta)   for m = 0,..., [(n+1)/2]-1
@@ -277,9 +277,10 @@ function makeaperture(gridsize::Integer, δ=0.0)
     y = range(-1, 1; length=gridsize)
     # δ = 0. # tuning of the aperture size
     r = 1 + δ / gridsize
-    ap = [(xc^2 + yc^2) <= r^2 ? 1 : 0 for xc in x, yc in y]
+    ## first index runs along y, second along x (same as makezerniketable)
+    ap = [(xc^2 + yc^2) <= r^2 ? 1 : 0 for yc in y, xc in x]
     # area = +(ap[:]...)
-    phmask = [(xc^2 + yc^2) <= r^2 ? 1 : NaN for xc in x, yc in y]
+    phmask = [(xc^2 + yc^2) <= r^2 ? 1 : NaN for yc in y, xc in x]
     return (ap, phmask)
 end
 

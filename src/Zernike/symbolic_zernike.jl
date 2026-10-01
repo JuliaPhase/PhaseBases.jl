@@ -51,12 +51,53 @@ struct BWNormalization  <: ZernikeNormalization end
 struct RMSNormalization <: ZernikeNormalization end
 
 ## Convenience singleton constants — use these in practice
-const Fringe   = FringeOrdering()
-const Noll     = NollOrdering()
-const OSA      = OSAOrdering()
-const Mizer    = MizerOrdering()
+"""
+    Fringe
+
+Singleton instance of `FringeOrdering`: University of Arizona Fringe single-index
+convention (1-based). See [`ZernikeOrdering`](@ref).
+"""
+const Fringe = FringeOrdering()
+
+"""
+    Noll
+
+Singleton instance of `NollOrdering`: Noll's single-index convention (1-based).
+See [`ZernikeOrdering`](@ref).
+"""
+const Noll = NollOrdering()
+
+"""
+    OSA
+
+Singleton instance of `OSAOrdering`: OSA/ANSI standard single-index convention
+(0-based). See [`ZernikeOrdering`](@ref).
+"""
+const OSA = OSAOrdering()
+
+"""
+    Mizer
+
+Singleton instance of `MizerOrdering`: Mizer internal single-index convention
+(1-based). See [`ZernikeOrdering`](@ref).
+"""
+const Mizer = MizerOrdering()
+
+"""
+    BornWolf
+
+Singleton instance of `BWNormalization`: unit amplitude at the aperture edge
+(classical Born & Wolf normalization). See [`ZernikeNormalization`](@ref).
+"""
 const BornWolf = BWNormalization()
-const RMSNorm  = RMSNormalization()
+
+"""
+    RMSNorm
+
+Singleton instance of `RMSNormalization`: unit RMS over the unit disk (OSA
+standard). See [`ZernikeNormalization`](@ref).
+"""
+const RMSNorm = RMSNormalization()
 
 export Fringe, Noll, OSA, Mizer, BornWolf, RMSNorm
 

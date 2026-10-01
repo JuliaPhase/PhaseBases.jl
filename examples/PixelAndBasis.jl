@@ -1,7 +1,10 @@
 using PhaseBases
-import PhaseBases: decompose, compose, inner, project, residual, project!, residual!
+import PhaseBases: inner
 using CairoMakie
+using PhaseBases: decompose  ## disambiguate from Makie/GeometryBasics `decompose`
+using Random: seed!
 CairoMakie.activate!(; type="png")
+seed!(1)   ## reproducible noise
 
 # # Pixel Basis and Generic Basis
 #
@@ -17,7 +20,7 @@ CairoMakie.activate!(; type="png")
 ## simple circular aperture
 N = 64
 xs = range(-1, 1; length=N)
-ap = [x^2 + y^2 ≤ 1.0 ? 1.0 : 0.0 for x in xs, y in xs]
+ap = [x^2 + y^2 ≤ 1.0 ? 1.0 : 0.0 for y in xs, x in xs]   ## first index runs along y
 pbas = PixelBasis(ap)
 length(pbas)   ## number of non-zero pixels
 
@@ -45,7 +48,7 @@ pbas_idx  = PixelBasis(indexes(pbas), (N, N)) ## from explicit indices
 σ = 0.25
 centers = [(-0.4, 0.0), (0.4, 0.0), (0.0, 0.5)]
 funcs = [
-    [exp(-((x - cx)^2 + (y - cy)^2) / (2σ^2)) for x in xs, y in xs]
+    [exp(-((x - cx)^2 + (y - cy)^2) / (2σ^2)) for y in xs, x in xs]
     for (cx, cy) in centers
 ]
 
@@ -54,14 +57,14 @@ ap_idx = findall(!iszero, ap)
 gbas = Basis(funcs, ap_idx)
 
 length(gbas)         ## 3
-norms(gbas)          ## Born & Wolf–style norms
+norms(gbas)          ## norms of the basis functions over the aperture
 
-# Visualise the three basis functions:
+# Visualize the three basis functions:
 
 fig = Figure(; size=(550, 180))
 for i in 1:3
     ax = Axis(fig[1, i]; title="g$i", aspect=DataAspect())
-    heatmap!(ax, elements(gbas)[i] .* aperture(gbas); colormap=:viridis)
+    heatmap!(ax, (elements(gbas)[i] .* aperture(gbas))'; colormap=:viridis)
     hidedecorations!(ax)
 end
 fig
@@ -79,9 +82,9 @@ fig2 = Figure(; size=(650, 220))
 ax1 = Axis(fig2[1, 1]; title="input", aspect=DataAspect())
 ax2 = Axis(fig2[1, 2]; title="fit", aspect=DataAspect())
 ax3 = Axis(fig2[1, 3]; title="residual", aspect=DataAspect())
-heatmap!(ax1, wf_true .* aperture(gbas); colormap=:RdBu)
-heatmap!(ax2, compose(gbas, fitted) .* aperture(gbas); colormap=:RdBu)
-heatmap!(ax3, wf_res .* aperture(gbas); colormap=:RdBu)
+heatmap!(ax1, (wf_true .* aperture(gbas))'; colormap=:RdBu)
+heatmap!(ax2, (compose(gbas, fitted) .* aperture(gbas))'; colormap=:RdBu)
+heatmap!(ax3, (wf_res .* aperture(gbas))'; colormap=:RdBu)
 fig2
 
 # Fitted coefficients vs truth:
@@ -133,28 +136,21 @@ maximum(abs, (g .- (g_proj .+ g_res)) .* ap)   ## ≈ 0, project + residual = g
 
 [inner(g_res, f, ap) for f in elements(gbas_sub)]   ## ≈ [0, 0]
 
-# Yet the heatmap of `g_res` (below) still visibly shows blobs near the `f1`,
-# `f2` centers, not just the shape of the omitted `f3`. This is not a
-# contradiction: orthogonality is an *inner-product* (integral) condition,
-# not a pointwise one. Since `f1`, `f2`, `f3` overlap and are not mutually
-# orthogonal, `f3` itself is not orthogonal to `f1`, `f2` — so removing the
-# best `f1`/`f2`-fit of `g` necessarily also removes part of the shape that
-# visually looks like `f1`/`f2` from within `f3`'s own footprint, and leaves
-# the rest as compensation so the total residual integrates to zero against
-# `f1`, `f2`. The residual is orthogonal to `gbas_sub` as a whole, not free
-# of any pointwise resemblance to its basis functions.
+# The heatmap of `g_res` (below) is not simply the omitted Gaussian `f3`:
+# it also shows structure near the centers of `f1` and `f2`. Orthogonality is an
+# integral condition, not a pointwise one, and since the three Gaussians overlap,
+# `f3` is itself not orthogonal to `f1` and `f2`. The projection therefore removes
+# part of `f3`'s shape too, and the residual is whatever remains orthogonal to
+# `gbas_sub` as a whole.
 
 fig3 = Figure(; size=(650, 220))
 ax1 = Axis(fig3[1, 1]; title="g (3 Gaussians)", aspect=DataAspect())
 ax2 = Axis(fig3[1, 2]; title="project(g, gbas_sub)", aspect=DataAspect())
 ax3 = Axis(fig3[1, 3]; title="residual(g, gbas_sub)", aspect=DataAspect())
-heatmap!(ax1, g .* ap; colormap=:RdBu)
-heatmap!(ax2, g_proj .* ap; colormap=:RdBu)
-heatmap!(ax3, g_res .* ap; colormap=:RdBu)
+heatmap!(ax1, (g .* ap)'; colormap=:RdBu)
+heatmap!(ax2, (g_proj .* ap)'; colormap=:RdBu)
+heatmap!(ax3, (g_res .* ap)'; colormap=:RdBu)
 fig3
-
-# The residual still shows the shape of the third (omitted) Gaussian bump,
-# since `gbas_sub` has no way to represent it.
 
 # ### Non-allocating fits: `project!` / `residual!`
 #
@@ -179,12 +175,11 @@ check_allocs(target_buf, coeffs_buf, g, gbas_sub)   ## 0
 # | Basis | Use case |
 # |:---|:---|
 # | `ZernikeBW` | Standard Zernike expansion, moderate order |
-# | `ZernikeBWSparse` | High-order Zernike, large grids |
 # | `PixelBasis` | Pixel-level operations, zonal phase |
 # | `Basis` | Any custom function set (Gaussians, wavelets, …) |
 # | `ShiftedBasis` | `Basis` with a non-zero origin (mean subtraction) |
 
-# ## Summary
+# ## 6 — Summary
 #
 # | Feature / function | Purpose |
 # |:---|:---|

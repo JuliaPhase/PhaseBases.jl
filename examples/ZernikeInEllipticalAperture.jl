@@ -32,7 +32,7 @@ CairoMakie.activate!(; type="png")
 # - $U$ — second rotation: rotates within the unit disk to align the optical
 #   frame with the camera frame
 #
-# The normalised coordinate of a pixel $p$ is then simply
+# The normalized coordinate of a pixel $p$ is then simply
 # $\mathbf{q} = M(p - c)$,
 # and the pixel is inside the aperture iff $\|\mathbf{q}\| \le 1$.
 #
@@ -66,39 +66,41 @@ U = rot(ϕ)                 ## rotates unit disk to match optical frame
 
 M = U * Σ * Vt       ## full transform:     q = M*(p - centre)
 
-## Map a pixel tuple (i,j) to normalised unit-disk coordinates
+## Map a pixel tuple (x,y) to normalized unit-disk coordinates
 to_uv(p, MM) = MM * [p[1] - cx, p[2] - cy]
 
-# ## Interior pixels and normalised coordinates
+# ## Interior pixels and normalized coordinates
 
-allpoints = [(i, j) for i in 1:N, j in 1:N]
+## pixel coordinates as (x, y) tuples; arrays are indexed [y, x], i.e. A[p[2], p[1]]
+allpoints = [(x, y) for y in 1:N, x in 1:N]
 pinel = filter(p -> norm(to_uv(p, M)) ≤ 1.0, vec(allpoints))
 
-## Normalised (u,v) coordinates — fed to makezerniketable
+## Normalized (u,v) coordinates — fed to makezerniketable
 pinel_uv = [to_uv(p, M) for p in pinel]
 
 println("Aperture: $(length(pinel)) pixels inside the ellipse")
 
-# Visualise the aperture.
+# Visualize the aperture.
 
 ap_mask = zeros(N, N)
 for p in pinel
-    ap_mask[p[1], p[2]] = 1.0
+    ap_mask[p[2], p[1]] = 1.0
 end
 
 fig_ap = Figure(; size=(360, 360))
 ax_ap = Axis(
     fig_ap[1, 1]; aspect=DataAspect(), title="Elliptical aperture ($(length(pinel)) pixels)"
 )
-heatmap!(ax_ap, ap_mask; colormap=:grays)
+heatmap!(ax_ap, ap_mask'; colormap=:grays)
 hidedecorations!(ax_ap)
 fig_ap
 
 # ## Building the Zernike bases
 #
 # `makezerniketable` accepts any collection of $(x,y)$ points and evaluates all
-# polynomials up to the requested order at those points.  We build two bases —
-# one with the full $M$, one with $M_{\text{no}U}$ — to compare their behaviour.
+# polynomials up to the requested order at those points.  The modes are returned in
+# OSA order, so mode `k` below has OSA index `k - 1`
+# (see [Zernike Bases](ZernikeBasis.md)).
 
 const MAX_ORDER = 6
 
@@ -119,9 +121,9 @@ println("Basis size: $nz polynomials (radial order ≤ $MAX_ORDER)")
 coef_truth = zeros(nz)
 coef_truth[3] = 1.0   ## x-tilt
 coef_truth[2] = -0.8   ## y-tilt
-coef_truth[5] = 0.6   ## astigmatism-like
-coef_truth[11] = 0.4   ## higher-order
-coef_truth[4] = 0.3   ## defocus-like
+coef_truth[5] = 0.6   ## defocus (2, 0)
+coef_truth[11] = 0.4   ## oblique quadrafoil (4, -4)
+coef_truth[4] = 0.3   ## oblique astigmatism (2, -2)
 
 phasevec = sum(coef_truth[j] * vecz[j] for j in 1:nz)
 
@@ -132,22 +134,24 @@ err = norm(rec .- phasevec)
 rel_err = err / norm(phasevec)
 println("Relative reconstruction error: $(round(rel_err * 100; sigdigits=3)) %")
 
-fig_coef = Figure(; size=(620, 290))
+fig_coef = Figure(; size=(800, 300))
 ax_coef = Axis(
     fig_coef[1, 1];
-    xlabel="Basis index",
     ylabel="Coefficient",
     title="Truth vs. recovered coefficients",
+    xticks=zerniketicks(nz),    ## tick labels show the (n, m) indices
+    xticklabelrotation=π / 3,
+    xticklabelsize=9,
 )
-scatterlines!(ax_coef, coef_truth; label="truth", markersize=10)
-scatterlines!(ax_coef, coef_rec; label="recovered", markersize=6, linestyle=:dash)
+barplot!(ax_coef, coef_truth; label="truth", n_dodge=2, dodge=1)
+barplot!(ax_coef, coef_rec; label="recovered", n_dodge=2, dodge=2)
 axislegend(ax_coef; position=:rt)
 fig_coef
 
 # ## Orthogonality of the Zernike basis
 #
 # In the continuum limit the Zernike polynomials are orthogonal on the disk.
-# On a finite pixel grid the normalised Gram matrix should be close to the
+# On a finite pixel grid the normalized Gram matrix should be close to the
 # identity matrix.  We verify this by computing
 # $G_{ij} = \langle Z_i, Z_j \rangle / (\|Z_i\| \|Z_j\|)$
 # and displaying the result as a heatmap.
@@ -157,7 +161,7 @@ gram = [dot(vecz[i], vecz[j]) / (norm(vecz[i]) * norm(vecz[j])) for i in 1:nz, j
 fig_gram = Figure(; size=(460, 420))
 ax_gram = Axis(
     fig_gram[1, 1];
-    title="Normalised Gram matrix  (\u2248 identity)",
+    title="Normalized Gram matrix  (\u2248 identity)",
     aspect=DataAspect(),
     xlabel="mode index",
     ylabel="mode index",
@@ -171,15 +175,15 @@ fig_gram
 phase_full = fill(NaN, N, N)
 rec_full = fill(NaN, N, N)
 for (p, v, r) in zip(pinel, phasevec, rec)
-    phase_full[p[1], p[2]] = v
-    rec_full[p[1], p[2]] = r
+    phase_full[p[2], p[1]] = v
+    rec_full[p[2], p[1]] = r
 end
 residual_full = phase_full .- rec_full
 
 hm_data = [phase_full, rec_full, residual_full]
 hm_titles = ["Original", "Reconstructed", "Residual"]
 
-## common colour limits across all three panels
+## common color limits across all three panels
 clim = let vals = filter(!isnan, reduce(vcat, vec.(hm_data)))
     (minimum(vals), maximum(vals))
 end
@@ -187,7 +191,7 @@ end
 fig_rec = Figure(; size=(900, 380))
 for (i, (data, ttl)) in enumerate(zip(hm_data, hm_titles))
     ax = Axis(fig_rec[1, i]; aspect=DataAspect(), title=ttl)
-    heatmap!(ax, data; colormap=:RdBu, colorrange=clim)
+    heatmap!(ax, data'; colormap=:RdBu, colorrange=clim)
     hidedecorations!(ax)
 end
 Colorbar(fig_rec[2, :]; limits=clim, colormap=:RdBu, vertical=false)
@@ -195,11 +199,12 @@ fig_rec
 
 # ## Zernike modes in two different ellipses
 #
-# Just for fun, let's place **two overlapping, differently shaped ellipses**
-# on the same axis, render a chosen Zernike mode inside each one using a
-# different colormap, and blend them with semi-transparency.  NaN pixels
-# (outside an aperture) are made fully transparent so the two layers
-# compose naturally.
+# Each aperture carries its own transform, so modes defined in different
+# ellipses are independent of one another.  To illustrate this, we place
+# **two overlapping, differently shaped ellipses** on the same axis, render a
+# chosen Zernike mode inside each one with a different colormap, and blend them
+# with semi-transparency.  NaN pixels (outside an aperture) are made fully
+# transparent so the two layers compose naturally.
 
 ## Ellipse 1: shallow, tilted right — centred left-of-middle
 const e1_cx, e1_cy = N ÷ 2 - 40, N ÷ 2
@@ -236,10 +241,10 @@ const MODE2 = 24   ##  in ellipse 2
 mode1_full = fill(NaN, N, N)
 mode2_full = fill(NaN, N, N)
 for (p, v) in zip(pinel1, vecz1[MODE1])
-    mode1_full[p[1], p[2]] = v
+    mode1_full[p[2], p[1]] = v
 end
 for (p, v) in zip(pinel2, vecz2[MODE2])
-    mode2_full[p[1], p[2]] = v
+    mode2_full[p[2], p[1]] = v
 end
 
 ## Convert a 2D data matrix to a semi-transparent RGBA image.
@@ -269,8 +274,8 @@ ax_fun = Axis(
     aspect=DataAspect(),
     title="Overlapping Zernike modes\n(mode $MODE1 — Blues, mode $MODE2 — Oranges)",
 )
-image!(ax_fun, rgba1)
-image!(ax_fun, rgba2)
+image!(ax_fun, permutedims(rgba1))
+image!(ax_fun, permutedims(rgba2))
 hidedecorations!(ax_fun)
 Colorbar(
     fig_fun[2, 1];
@@ -293,9 +298,9 @@ fig_fun
 # | Step | Code |
 # |:---|:---|
 # | Build transform | `M = U * Diagonal([1/a, 1/b]) * rot(θ)` |
-# | Normalise pixel | `q = M * (p .- centre)` |
+# | Normalize pixel | `q = M * (p .- centre)` |
 # | Interior test | `norm(q) ≤ 1` |
-# | Build Zernike table | `makezerniketable(pinel_uv, order)` |
+# | Build Zernike table | `PhaseBases.makezerniketable(pinel_uv, order)` |
 # | Wrap into basis | `Basis(vecz, eachindex(pinel_uv))` |
 # | Decompose | `PhaseBases.decompose(phasevec, bas)` |
 # | Reconstruct | `compose(bas, coef)` |

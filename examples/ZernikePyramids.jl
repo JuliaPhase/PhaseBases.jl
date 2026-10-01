@@ -15,38 +15,46 @@ CairoMakie.activate!(; type="png")
 # indexed by radial order $n$ (rows) and azimuthal frequency $m$ (columns).
 # In the Born & Wolf / OSA convention this gives a triangular "pyramid."
 #
-# However, the **Fringe** (University of Arizona) convention re-orders the
-# polynomials so that terms with the same optical path difference are grouped
-# together. When arranged by their $(n, m)$ pairs, the Fringe ordering traces
-# a **diamond**-shaped pa
-# ttern rather than a triangle.
+# However, the **Fringe** (University of Arizona) convention orders the
+# polynomials by increasing $n + |m|$, so that terms of similar optical
+# significance are grouped together. When arranged by their $(n, m)$ pairs, the
+# Fringe ordering traces a **diamond**-shaped pattern rather than a triangle.
 #
-# This page renders both layouts side by side.
+# This page renders both layouts.
 
 # ## Setup
 #
 # We create a moderately sized Zernike basis and a helper function that
-# plots a single polynomial into a subplot cell.
+# draws a single polynomial at a given position.
 
 zbas = ZernikeBW(128, 10)  ## 128×128 grid, polynomials up to radial order 10
 ap = mask(zbas)            ## NaN outside aperture — clean display
 
-"""
-    plot_zernike!(fig, row, col, osa_idx; kw...)
+## Cell size, step, and padding (pixels).
+## CELL — width/height of each individual heatmap.
+## STEP — centre-to-centre distance between adjacent cells (must be ≥ CELL).
+const CELL = 64
+const STEP = 76
+const PAD_H = 50   ## horizontal padding on each side
+const PAD_T = 60   ## space reserved for the title at the top
+const PAD_B = 20   ## bottom padding
 
-Place a `heatmap` of the Zernike polynomial at 1-based array position
-`osa_idx` (= OSA index + 1) into `fig[row, col]`.
-"""
-function plot_zernike!(fig, row, col, osa_idx; label="", kw...)
+## Place a single Zernike heatmap centred at pixel (cx, cy) in fig.
+function place_zernike!(fig, cx, cy, osa_arr_idx; label="")
+    half = CELL / 2
     ax = Axis(
-        fig[row, col]; aspect=DataAspect(), title=label, titlesize=10, titlefont=:regular
+        fig;
+        bbox=BBox(cx - half, cx + half, cy - half, cy + half),
+        aspect=DataAspect(),
+        title=label,
+        titlesize=9,
+        titlefont=:regular,
     )
     heatmap!(
         ax,
-        (elements(zbas, osa_idx) .* ap)';  ## transpose to match display orientation
+        (elements(zbas, osa_arr_idx) .* ap)';
         colormap=reverse(cgrad(:RdBu)),
         colorrange=(-1, 1),
-        kw...,
     )
     hidedecorations!(ax)
     hidespines!(ax)
@@ -69,39 +77,40 @@ end
 
 maxn = 6   ## show orders 0 through 6
 
-fig_bw = Figure(; size=(900, 900))
+bw_width = ((2maxn + 1) * STEP + 2PAD_H) / 2
+bw_height = (maxn + 2) * STEP + PAD_T + PAD_B
+bw_ox = bw_width / 2
+bw_top_y = bw_height - PAD_T - STEP / 2
+
+fig_bw = Figure(; size=(bw_width, bw_height))
+
+text!(
+    fig_bw.scene,
+    "Born & Wolf / OSA Pyramid  (n = 0 … $maxn)";
+    position=(bw_width / 2, bw_height - PAD_T / 2),
+    align=(:center, :center),
+    fontsize=18,
+    font=:bold,
+)
 
 for n in 0:maxn
     for m in (-n):2:n
-        osa_j = nm_to_osa_j(; n=n, m=m)
-        arr_idx = osa_j + 1   ## 1-based position in ZernikeBW
-        ## Column: map m ∈ [-maxn, maxn] to grid columns 1..(2maxn+1)
-        gcol = m + maxn + 1
-        ## Row: n+1 (offset by 1 for the title row)
-        grow = n + 2
-        plot_zernike!(fig_bw, grow, gcol, arr_idx; label="($n,$m)")
+        arr_idx = nm_to_osa_j(; n=n, m=m) + 1   ## 1-based position in zbas
+        cx = bw_ox + m * (STEP / 2)
+        cy = bw_top_y - n * STEP
+        place_zernike!(fig_bw, cx, cy, arr_idx; label="($n,$m)")
     end
 end
 
-## Force equal cell sizes so isolated extremal columns (e.g. (6,-6)) are not oversized
-cell_px = 65
-for i in 1:(2maxn + 1)
-    colsize!(fig_bw.layout, i, Fixed(cell_px))
-end
-for i in 2:(maxn + 2)
-    rowsize!(fig_bw.layout, i, Fixed(cell_px))
-end
-Label(fig_bw[1, :], "Born & Wolf / OSA Pyramid  (n = 0 … $maxn)"; fontsize=18, font=:bold)
 Colorbar(
-    fig_bw[maxn + 3, :];
+    fig_bw[2, :];
     colormap=reverse(cgrad(:RdBu)),
     limits=(-1, 1),
-    vertical=false,
-    width=Relative(0.5),
-    height=Relative(0.05),
+    width=bw_width * 0.5,
+    height=PAD_B * 0.5,
     label="Zernike Value",
+    vertical=false,
 )
-resize_to_layout!(fig_bw)
 
 fig_bw
 
@@ -112,10 +121,9 @@ fig_bw
 
 # ## Fringe / University of Arizona Diamond
 #
-# The Fringe ordering groups polynomials by "rings" of roughly equal optical
-# significance. When we plot them by their $(n, m)$ coordinates, they trace a
-# diamond (or rotated square) rather than a triangle, because the Fringe
-# convention interleaves different radial orders.
+# The Fringe ordering groups polynomials into "rings" of constant $n + |m|$.
+# Plotted by their $(n, m)$ coordinates, they trace a diamond (or rotated square)
+# rather than a triangle, because each ring interleaves different radial orders.
 #
 # Below we show the first 36 Fringe terms (indices 1–36). With a basis of order 10,
 # all 36 terms — including the bottom-apex terms F34=(9,-1), F35=(9,1), F36=(10,0) —
@@ -123,49 +131,45 @@ fig_bw
 
 n_fringe = 36  ## number of Fringe terms to display
 
-## Collect all (n,m) pairs for Fringe 1..n_fringe
 fringe_nm = [fringe_j_to_nm(j) for j in 1:n_fringe]
-max_n_fringe = maximum(nm.n for nm in fringe_nm)
-max_m_fringe = maximum(abs(nm.m) for nm in fringe_nm)
+max_n_fr = maximum(nm.n for nm in fringe_nm)
+max_abs_m = maximum(abs(nm.m) for nm in fringe_nm)
 
-fig_fr = Figure(; size=(900, 1000))
+fr_width = ((2max_abs_m + 1) * STEP + 2PAD_H) / 2
+fr_height = (max_n_fr + 2) * STEP + PAD_T + PAD_B
+fr_ox = fr_width / 2
+fr_top_y = fr_height - PAD_T - STEP / 2
 
+fig_fr = Figure(; size=(fr_width, fr_height))
 
-for j in 1:n_fringe
-    nm = fringe_nm[j]
-    n, m = nm.n, nm.m
-    osa_j = nm_to_osa_j(; n=n, m=m)
-    arr_idx = osa_j + 1
-    ## Need a larger basis if max order exceeds what we built
-    arr_idx > length(zbas) && continue
-    ## Grid position: row = n, col = m (centered)
-    grow = n + 2
-    gcol = m + max_m_fringe + 1
-    plot_zernike!(fig_fr, grow, gcol, arr_idx; label="F$j ($n,$m)")
-end
-
-Label(fig_fr[1, :], "Fringe Diamond  (first $n_fringe terms)"; fontsize=18, font=:bold)
-Colorbar(
-    fig_fr[max_n_fringe + 3, :];
-    colormap=reverse(cgrad(:RdBu)),
-    limits=(-1, 1),
-    vertical=false,
-    width=Relative(0.5),
-    height=Relative(0.05),
-    label="Zernike Value",
+text!(
+    fig_fr.scene,
+    "Fringe Diamond  (first $n_fringe terms)";
+    position=(fr_width / 2, fr_height - PAD_T / 2),
+    align=(:center, :center),
+    fontsize=18,
+    font=:bold,
 )
 
-## Force equal cell sizes so isolated extremal columns (e.g. (5,-5)) are not oversized
-cell_px_fr = 65
-for i in 1:(2max_m_fringe + 1)
-    colsize!(fig_fr.layout, i, Fixed(cell_px_fr))
-end
-for i in 2:(max_n_fringe + 3)
-    rowsize!(fig_fr.layout, i, Fixed(cell_px_fr))
+for j in 1:n_fringe
+    n, m = fringe_nm[j].n, fringe_nm[j].m
+    arr_idx = nm_to_osa_j(; n=n, m=m) + 1
+    arr_idx > length(zbas) && continue  ## basis too small for this term
+    cx = fr_ox + m * (STEP / 2)
+    cy = fr_top_y - n * STEP
+    place_zernike!(fig_fr, cx, cy, arr_idx; label="F$j ($n,$m)")
 end
 
+Colorbar(
+    fig_fr[2, :];
+    colormap=reverse(cgrad(:RdBu)),
+    limits=(-1, 1),
+    width=fr_width * 0.5,
+    height=PAD_B * 0.5,
+    label="Zernike Value",
+    vertical=false,
+)
 
-resize_to_layout!(fig_fr)
 fig_fr
 
 # The diamond shape is clearly visible: Fringe index 1 sits at the top (piston),
@@ -213,8 +217,8 @@ end
 #
 # - **OSA / Born & Wolf**: polynomials tile a **triangle** — each row $n$ has
 #   $n+1$ terms, arranged symmetrically around $m=0$.
-# - **Fringe**: polynomials tile a **diamond** — terms are grouped by optical
-#   significance, interleaving different radial orders.
+# - **Fringe**: polynomials tile a **diamond** — terms are grouped by
+#   $n + |m|$, interleaving different radial orders.
 # - Both orderings describe the *same* polynomials; only the single-index
 #   numbering differs. Use [`reorder`](@ref) or the `j_to_nm` / `nm_to_j`
 #   dispatch to translate freely.

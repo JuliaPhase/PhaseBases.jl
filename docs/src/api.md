@@ -13,6 +13,14 @@ Private = false
 Order = [:type]
 ```
 
+## Constants
+
+```@autodocs
+Modules = [PhaseBases]
+Private = false
+Order = [:constant]
+```
+
 ## Functions
 
 ```@autodocs
